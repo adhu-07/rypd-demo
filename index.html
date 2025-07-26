@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rypd - Gym Progress Tracker Demo</title>
+    <!-- Google Fonts: Oswald for headings, Roboto for body -->
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom CSS for fonts and animations -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        h1, h2, h3 {
+            font-family: 'Oswald', sans-serif;
+        }
+
+        /* Message display animation */
+        .fade-in {
+            animation: fadeIn 0.3s forwards;
+        }
+        .fade-out {
+            animation: fadeOut 0.3s forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -10px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translate(-50%, 0); }
+            to { opacity: 0; transform: translate(-50%, -10px); }
+        }
+
+        /* Like button pulse animation */
+        .pulse-animation {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3); /* Lighter border for dark background */
+            border-left-color: #00BCD4; /* Primary Accent (Cyan) */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Splash screen transition */
+        .splash-exit {
+            opacity: 0;
+            transform: translateY(-100vh);
+            transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+        }
+        .app-enter {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#1A1A2E] text-[#E0E0E0] flex flex-col items-center p-4">
+
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="fixed inset-0 bg-[#1A1A2E] flex flex-col items-center justify-center z-50 transition-all duration-800 ease-in-out">
+        <h1 class="text-6xl font-oswald font-bold text-[#00BCD4] mb-8 animate-pulse">Rypd</h1>
+        <button id="continue-app-btn" class="bg-[#00BCD4] text-white py-3 px-8 rounded-xl font-semibold text-lg shadow-lg hover:bg-[#00E5FF] transition-all duration-300 transform hover:scale-105">
+            Continue to App
+        </button>
+    </div>
+
+    <!-- Message Display Area -->
+    <div id="message-display" class="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 opacity-0 transition-opacity duration-300">
+        <!-- Messages will appear here -->
+    </div>
+
+    <!-- Main App Content Area -->
+    <div id="content-area" class="w-full max-w-2xl bg-[#2E2E4A] text-[#E0E0E0] shadow-md rounded-xl p-4 mb-20 flex-grow hidden opacity-0 transform translate-y-full">
+        <!-- Page content will be dynamically loaded here by JavaScript -->
+        <h2 class="text-2xl font-semibold text-[#E0E0E0] mb-6 text-center">Loading...</h2>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav id="nav-bar" class="fixed bottom-0 left-0 right-0 w-full bg-[#2E2E4A] shadow-lg rounded-t-xl p-4 flex justify-around items-center z-40 hidden opacity-0 transform translate-y-full">
+        <button id="nav-feed" class="flex flex-col items-center px-4 py-2 rounded-md font-medium text-[#A0A0B0] hover:bg-[#1A1A2E] transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span class="text-xs mt-1">Feed</span>
+        </button>
+        <button id="nav-create" class="flex flex-col items-center px-4 py-2 rounded-md font-medium text-[#A0A0B0] hover:bg-[#1A1A2E] transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>
+            </svg>
+            <span class="text-xs mt-1">Create</span>
+        </button>
+        <button id="nav-profile" class="flex flex-col items-center px-4 py-2 rounded-md font-medium text-[#A0A0B0] hover:bg-[#1A1A2E] transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="text-xs mt-1">Profile</span>
+        </button>
+        <button id="nav-ai" class="flex flex-col items-center px-4 py-2 rounded-md font-medium text-[#A0A0B0] hover:bg-[#1A1A2E] transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 8V4H8"/><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M6 15h2"/><path d="M10 15h2"/><path d="M14 15h2"/>
+            </svg>
+            <span class="text-xs mt-1">AI Coach</span>
+        </button>
+        <button id="nav-challenges" class="flex flex-col items-center px-4 py-2 rounded-md font-medium text-[#A0A0B0] hover:bg-[#1A1A2E] transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span class="text-xs mt-1">Challenges</span>
+        </button>
+    </nav>
+
+    <!-- Firebase SDK Imports (type="module" is crucial for ES6 imports) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables for Firebase instances (declared in window scope for accessibility)
+        window.app = null;
+        window.db = null;
+        window.auth = null;
+        window.userId = null;
+        window.isAuthReady = false;
+
+        // Demo Data (Hardcoded for demonstration)
+        let demoPosts = [
+            {
+                id: 'post1',
+                userId: 'fitness_fanatic_789',
+                content: "Crushed my leg day PR! 🏋️‍♀️ Feeling stronger every session. Consistency is key!",
+                imageUrl: "https://placehold.co/600x400/00BCD4/FFFFFF?text=Leg+Day+PR", // Updated placeholder color
+                timestamp: new Date(Date.now() - 7200000), // 2 hours ago
+                likes: ['demo_user_123'], // Array of user IDs who liked (demo only)
+                comments: [
+                    { userId: 'gym_buddy_007', text: 'Awesome work! What was your PR on?' },
+                    { userId: 'strength_seeker', text: 'Inspiring! Keep it up!' }
+                ]
+            },
+            {
+                id: 'post2',
+                userId: 'healthy_eats_gal',
+                content: "Meal prep Sunday success! 🥦🥕 Getting those greens in. Fueling my body right.",
+                imageUrl: "https://placehold.co/600x400/8BC34A/FFFFFF?text=Meal+Prep", // Updated placeholder color
+                timestamp: new Date(Date.now() - 86400000), // 1 day ago
+                likes: [],
+                comments: [
+                    { userId: 'nutrition_nerd', text: 'Looks delicious! What recipe did you use?' }
+                ]
+            },
+            {
+                id: 'post3',
+                userId: 'cardio_queen_111',
+                content: "Just finished a challenging 10k run! 🏃‍♀️💨 Feeling invigorated. Who else loves morning cardio?",
+                imageUrl: "",
+                timestamp: new Date(Date.now() - 172800000), // 2 days ago
+                likes: ['demo_user_123', 'gym_buddy_007'],
+                comments: []
+            }
+        ];
+
+        let demoUserProfile = {
+            userId: 'loading...', // Will be updated by Firebase auth
+            profilePic: 'https://placehold.co/100x100/8BC34A/FFFFFF?text=User', // Updated placeholder color
+            bio: 'Fitness enthusiast | On a journey to strength and health!',
+            goals: 'Gain 10lbs muscle, run a 5k',
+            currentWeight: '75 kg',
+            height: '175 cm'
+        };
+
+        let demoWeightLogs = [
+            { date: 'July 20, 2025', weight: '74.5 kg' },
+            { date: 'July 13, 2025', weight: '74 kg' },
+            { date: 'July 06, 2025', weight: '73.8 kg' }
+        ];
+
+        let demoChallenges = [
+            {
+                id: 'challenge1',
+                title: '30-Day Squat Challenge',
+                description: 'Complete 100 squats daily for 30 days!',
+                participants: 500
+            },
+            {
+                id: 'challenge2',
+                title: 'Weekly Step Goal (100k Steps)',
+                description: 'Hit 100,000 steps in a single week!',
+                participants: 1200
+            },
+            {
+                id: 'challenge3',
+                title: 'Plank Hold Master',
+                description: 'Improve your plank hold time by 30 seconds over 2 weeks!',
+                participants: 300
+            }
+        ];
+
+        // UI Element References
+        const splashScreen = document.getElementById('splash-screen');
+        const continueAppBtn = document.getElementById('continue-app-btn');
+        const contentArea = document.getElementById('content-area');
+        const navBar = document.getElementById('nav-bar');
+        const navButtons = {
+            feed: document.getElementById('nav-feed'),
+            create: document.getElementById('nav-create'),
+            profile: document.getElementById('nav-profile'),
+            ai: document.getElementById('nav-ai'),
+            challenges: document.getElementById('nav-challenges')
+        };
+        const messageDisplay = document.getElementById('message-display');
+
+        let currentPage = 'feed'; // Initial page
+
+        // Function to display temporary messages
+        function showMessage(msg, duration = 3000) {
+            messageDisplay.textContent = msg;
+            messageDisplay.classList.remove('opacity-0', 'fade-out');
+            messageDisplay.classList.add('opacity-100', 'fade-in');
+
+            setTimeout(() => {
+                messageDisplay.classList.remove('opacity-100', 'fade-in');
+                messageDisplay.classList.add('opacity-0', 'fade-out');
+            }, duration);
+        }
+
+        // Function to render different pages
+        function showPage(pageName) {
+            currentPage = pageName;
+            contentArea.innerHTML = ''; // Clear current content
+
+            // Update active navigation button
+            Object.keys(navButtons).forEach(key => {
+                if (key === pageName) {
+                    navButtons[key].classList.add('bg-[#1A1A2E]', 'text-[#00BCD4]', 'shadow-lg'); // Active: Dark background, Cyan text
+                    navButtons[key].classList.remove('text-[#A0A0B0]', 'hover:bg-[#1A1A2E]'); // Inactive: Light gray text, dark hover
+                } else {
+                    navButtons[key].classList.remove('bg-[#1A1A2E]', 'text-[#00BCD4]', 'shadow-lg');
+                    navButtons[key].classList.add('text-[#A0A0B0]', 'hover:bg-[#1A1A2E]');
+                }
+            });
+
+            switch (pageName) {
+                case 'feed':
+                    renderFeedPage();
+                    break;
+                case 'create':
+                    renderCreatePostPage();
+                    break;
+                case 'profile':
+                    renderProfilePage();
+                    break;
+                case 'ai':
+                    renderAIAssistantPage();
+                    break;
+                case 'challenges':
+                    renderChallengesPage();
+                    break;
+                default:
+                    renderFeedPage();
+            }
+        }
+
+        // Helper to format timestamp
+        function formatTimestamp(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMinutes = Math.round(diffMs / (1000 * 60));
+            const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffMinutes < 1) return 'Just now';
+            if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+            if (diffHours < 24) return `${diffHours} hours ago`;
+            if (diffDays < 7) return `${diffDays} days ago`;
+            return date.toLocaleDateString();
+        }
+
+        // --- Page Rendering Functions ---
+
+        function renderFeedPage() {
+            contentArea.innerHTML = `
+                <h2 class="text-2xl font-oswald font-semibold text-[#E0E0E0] mb-6 text-center">Your Feed</h2>
+                <div id="posts-container" class="space-y-6"></div>
+            `;
+            const postsContainer = document.getElementById('posts-container');
+
+            demoPosts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'bg-[#2E2E4A] rounded-xl shadow-md p-6 text-[#E0E0E0]'; // Darker card background, light text
+                postElement.innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 bg-[#00BCD4] rounded-full flex items-center justify-center text-white font-bold text-lg mr-3">
+                            ${post.userId.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <p class="font-semibold text-[#E0E0E0]">${post.userId}</p>
+                            <p class="text-sm text-[#A0A0B0]">${formatTimestamp(post.timestamp)}</p>
+                        </div>
+                    </div>
+                    <p class="text-[#E0E0E0] mb-4">${post.content}</p>
+                    ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Progress Image" class="w-full rounded-lg mb-4 object-cover max-h-80">` : ''}
+                    <div class="flex items-center justify-between text-[#A0A0B0]">
+                        <button class="flex items-center space-x-1 px-3 py-1 rounded-full hover:bg-[#1A1A2E] transition-colors duration-200 like-button" data-post-id="${post.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${post.likes.includes(window.userId) ? 'text-red-500 fill-current' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                            </svg>
+                            <span class="like-count">${post.likes.length}</span>
+                        </button>
+                        <button class="flex items-center space-x-1 px-3 py-1 rounded-full hover:bg-[#1A1A2E] transition-colors duration-200 comment-button" data-post-id="${post.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 11.5a2.5 2.5 0 0 0-5 0v2.5c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1v-2.5a2.5 2.5 0 0 0-5 0v2.5c0 .6-.4 1-1 1H1c-.6 0-1-.4-1-1V9a2 2 0 0 1 2-2h3c.6 0 1-.4 1-1V3.5A2.5 2.5 0 0 1 10.5 1h3A2.5 2.5 0 0 1 16 3.5V6c0 .6.4 1 1 1h3a2 2 0 0 1 2 2v2.5c0 .6-.4 1-1 1h-1c-.6 0-1-.4-1-1V11.5Z"/>
+                            </svg>
+                            <span>${post.comments.length}</span>
+                        </button>
+                    </div>
+                    <div class="comments-section mt-4 hidden">
+                        <div class="space-y-2 mb-4">
+                            ${post.comments.map(comment => `
+                                <div class="bg-[#1A1A2E] p-3 rounded-lg text-sm">
+                                    <span class="font-semibold text-[#E0E0E0]">${comment.userId}:</span> ${comment.text}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="flex">
+                            <input type="text" placeholder="Add a comment..." class="flex-grow p-2 border border-[#4A4A6A] rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#00BCD4] bg-[#1A1A2E] text-[#E0E0E0]">
+                            <button class="bg-[#00BCD4] text-white px-4 py-2 rounded-r-lg hover:bg-[#00E5FF] transition-colors duration-200 add-comment-btn">Post</button>
+                        </div>
+                    </div>
+                `;
+                postsContainer.appendChild(postElement);
+            });
+
+            // Add event listeners for like and comment buttons
+            postsContainer.querySelectorAll('.like-button').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const postId = event.currentTarget.dataset.postId;
+                    const post = demoPosts.find(p => p.id === postId);
+                    if (!post) return;
+
+                    const likeCountSpan = event.currentTarget.querySelector('.like-count');
+                    const heartIcon = event.currentTarget.querySelector('svg');
+
+                    if (post.likes.includes(window.userId)) {
+                        post.likes = post.likes.filter(id => id !== window.userId);
+                        heartIcon.classList.remove('text-red-500', 'fill-current');
+                        showMessage("Post unliked! (Demo only)");
+                    } else {
+                        post.likes.push(window.userId);
+                        heartIcon.classList.add('text-red-500', 'fill-current');
+                        event.currentTarget.classList.add('pulse-animation');
+                        event.currentTarget.addEventListener('animationend', () => {
+                            event.currentTarget.classList.remove('pulse-animation');
+                        }, { once: true });
+                        showMessage("Post liked! (Demo only)");
+                    }
+                    likeCountSpan.textContent = post.likes.length;
+                });
+            });
+
+            postsContainer.querySelectorAll('.comment-button').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const commentsSection = event.currentTarget.closest('.bg-[#2E2E4A]').querySelector('.comments-section');
+                    commentsSection.classList.toggle('hidden');
+                });
+            });
+
+            postsContainer.querySelectorAll('.add-comment-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const input = event.currentTarget.previousElementSibling;
+                    if (input.value.trim()) {
+                        showMessage("Comment added! (Demo only, not saved)");
+                        input.value = ''; // Clear input
+                    }
+                });
+            });
+        }
+
+        function renderCreatePostPage() {
+            contentArea.innerHTML = `
+                <h2 class="text-2xl font-oswald font-semibold text-[#E0E0E0] mb-6 text-center">Create New Post</h2>
+                <div class="bg-[#2E2E4A] rounded-xl shadow-md p-6 text-[#E0E0E0]">
+                    <div class="mb-4">
+                        <label for="new-post-content" class="block text-[#E0E0E0] text-sm font-bold mb-2">What's your progress today?</label>
+                        <textarea id="new-post-content" class="w-full p-3 border border-[#4A4A6A] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00BCD4] bg-[#1A1A2E] text-[#E0E0E0] h-28 resize-y" placeholder="Share your workout, achievement, or thoughts..."></textarea>
+                    </div>
+                    <div class="mb-6">
+                        <label for="new-post-image-url" class="block text-[#E0E0E0] text-sm font-bold mb-2">Image URL (Optional)</label>
+                        <input type="text" id="new-post-image-url" class="w-full p-3 border border-[#4A4A6A] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00BCD4] bg-[#1A1A2E] text-[#E0E0E0]" placeholder="e.g., https://example.com/your-progress.jpg">
+                    </div>
+                    <button id="share-post-btn" class="w-full bg-[#00BCD4] text-white py-3 rounded-lg font-semibold text-lg shadow-md hover:bg-[#00E5FF] transition-colors duration-300">Share Progress</button>
+                </div>
+            `;
+
+            document.getElementById('share-post-btn').addEventListener('click', () => {
+                const content = document.getElementById('new-post-content').value;
+                const imageUrl = document.getElementById('new-post-image-url').value;
+
+                if (content.trim() || imageUrl.trim()) {
+                    showMessage("Post shared! (Demo only, not saved to database)");
+                    // Simulate adding to local array for immediate feedback, but it won't persist
+                    demoPosts.unshift({
+                        id: `post${Date.now()}`,
+                        userId: window.userId || 'demo_user',
+                        content: content,
+                        imageUrl: imageUrl,
+                        timestamp: new Date(),
+                        likes: [],
+                        comments: []
+                    });
+                    document.getElementById('new-post-content').value = '';
+                    document.getElementById('new-post-image-url').value = '';
+                    showPage('feed'); // Go back to feed after "posting"
+                } else {
+                    showMessage("Please add some content or an image URL.");
+                }
+            });
+        }
+
+        function renderProfilePage() {
+            contentArea.innerHTML = `
+                <h2 class="text-2xl font-oswald font-semibold text-[#E0E0E0] mb-6 text-center">Your Profile</h2>
+                <div class="bg-[#2E2E4A] rounded-xl shadow-md p-6 mb-6 text-center text-[#E0E0E0]">
+                    <img src="${demoUserProfile.profilePic}" alt="Profile Picture" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-[#8BC34A]">
+                    <p class="text-xl font-bold text-[#E0E0E0] mb-2">${window.userId || 'Loading User ID...'}</p>
+                    <p class="text-[#A0A0B0] mb-4">${demoUserProfile.bio}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                        <div class="bg-[#1A1A2E] p-4 rounded-lg">
+                            <p class="text-sm font-semibold text-[#A0A0B0]">Goals</p>
+                            <p class="text-[#E0E0E0]">${demoUserProfile.goals}</p>
+                        </div>
+                        <div class="bg-[#1A1A2E] p-4 rounded-lg">
+                            <p class="text-sm font-semibold text-[#A0A0B0]">Current Weight</p>
+                            <p class="text-[#E0E0E0]">${demoUserProfile.currentWeight}</p>
+                        </div>
+                        <div class="bg-[#1A1A2E] p-4 rounded-lg">
+                            <p class="text-sm font-semibold text-[#A0A0B0]">Height</p>
+                            <p class="text-[#E0E0E0]">${demoUserProfile.height}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#2E2E4A] rounded-xl shadow-md p-6 text-[#E0E0E0]">
+                    <h3 class="text-xl font-oswald font-semibold text-[#E0E0E0] mb-4">Weight Log</h3>
+                    <div id="weight-logs-container" class="space-y-2 mb-4">
+                        ${demoWeightLogs.map(log => `
+                            <div class="flex justify-between items-center bg-[#1A1A2E] p-3 rounded-lg text-[#E0E0E0]">
+                                <span>${log.date}</span>
+                                <span class="font-medium">${log.weight}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="number" id="new-weight-input" class="flex-grow p-3 border border-[#4A4A6A] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8BC34A] bg-[#1A1A2E] text-[#E0E0E0]" placeholder="Enter new weight (kg)">
+                        <button id="log-weight-btn" class="bg-[#8BC34A] text-white px-5 py-3 rounded-lg font-semibold hover:bg-[#9CCC65] transition-colors duration-300">Log Weight</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('log-weight-btn').addEventListener('click', () => {
+                const newWeightInput = document.getElementById('new-weight-input');
+                const newWeight = newWeightInput.value.trim();
+                if (newWeight && !isNaN(newWeight)) {
+                    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const newLog = { date: today, weight: `${newWeight} kg` };
+                    demoWeightLogs.unshift(newLog); // Add to local demo data
+                    showMessage("Weight logged! (Demo only, not saved)");
+                    newWeightInput.value = '';
+                    renderProfilePage(); // Re-render to show updated log
+                } else {
+                    showMessage("Please enter a valid weight.");
+                }
+            });
+        }
+
+        function renderAIAssistantPage() {
+            contentArea.innerHTML = `
+                <h2 class="text-2xl font-oswald font-semibold text-[#E0E0E0] mb-6 text-center">AI Fitness Assistant</h2>
+                <div class="bg-[#2E2E4A] rounded-xl shadow-md p-6 text-[#E0E0E0]">
+                    <div class="mb-4">
+                        <label for="ai-prompt-input" class="block text-[#E0E0E0] text-sm font-bold mb-2">Describe your fitness goals, current level, dietary preferences, available equipment, and time commitment:</label>
+                        <textarea id="ai-prompt-input" class="w-full p-3 border border-[#4A4A6A] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00BCD4] bg-[#1A1A2E] text-[#E0E0E0] h-36 resize-y" placeholder="e.g., 'I want a 4-day muscle gain workout plan for the gym, I'm intermediate, no dietary restrictions, 60 mins per session.'"></textarea>
+                    </div>
+                    <button id="generate-plan-btn" class="w-full bg-[#00BCD4] text-white py-3 rounded-lg font-semibold text-lg shadow-md hover:bg-[#00E5FF] transition-colors duration-300 flex items-center justify-center">
+                        <span id="ai-button-text">Generate Plan</span>
+                        <div id="ai-spinner" class="spinner ml-3 hidden"></div>
+                    </button>
+
+                    <div id="ai-response-area" class="mt-6 p-4 bg-[#1A1A2E] rounded-lg border border-[#4A4A6A] min-h-[150px] overflow-auto text-[#E0E0E0] whitespace-pre-wrap">
+                        Your personalized plan will appear here.
+                    </div>
+                </div>
+            `;
+
+            const generatePlanBtn = document.getElementById('generate-plan-btn');
+            const aiPromptInput = document.getElementById('ai-prompt-input');
+            const aiResponseArea = document.getElementById('ai-response-area');
+            const aiButtonText = document.getElementById('ai-button-text');
+            const aiSpinner = document.getElementById('ai-spinner');
+
+            generatePlanBtn.addEventListener('click', async () => {
+                const prompt = aiPromptInput.value.trim();
+                if (!prompt) {
+                    showMessage("Please enter your request for the AI assistant.");
+                    return;
+                }
+
+                aiButtonText.textContent = 'Generating...';
+                aiSpinner.classList.remove('hidden');
+                generatePlanBtn.disabled = true; // Disable button during loading
+                aiResponseArea.textContent = 'Generating your personalized plan...';
+
+                try {
+                    // --- PLACEHOLDER FOR YOUR GEMINI API KEY ---
+                    // Replace "YOUR_GEMINI_API_KEY_HERE" with your actual Gemini API Key.
+                    // Example: const apiKey = "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+                    const apiKey = "AIzaSyArciJov5FzUZwLFyC0qqDKns_nhuK0ACA"; // User's provided Gemini API Key
+                    // --- END PLACEHOLDER ---
+
+                    if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
+                        aiResponseArea.textContent = "Gemini API Key is not configured. Please replace 'YOUR_GEMINI_API_KEY_HERE' in the code with your actual key.";
+                        showMessage("Gemini API Key missing.");
+                        return; // Stop execution if key is not set
+                    }
+
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const payload = {
+                        contents: [{ role: "user", parts: [{ text: prompt }] }]
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        aiResponseArea.textContent = text;
+                        showMessage("Plan generated successfully!");
+                    } else {
+                        aiResponseArea.textContent = "Could not generate plan. Please try again or refine your prompt.";
+                        console.error("Gemini API response structure unexpected:", result);
+                        showMessage("Error generating plan.");
+                    }
+                } catch (error) {
+                    aiResponseArea.textContent = "An error occurred while connecting to the AI. Please check your network and try again.";
+                    console.error("Error calling Gemini API:", error);
+                    showMessage(`Network error: ${error.message}`);
+                } finally {
+                    aiButtonText.textContent = 'Generate Plan';
+                    aiSpinner.classList.add('hidden');
+                    generatePlanBtn.disabled = false; // Re-enable button
+                }
+            });
+        }
+
+        function renderChallengesPage() {
+            contentArea.innerHTML = `
+                <h2 class="text-2xl font-oswald font-semibold text-[#E0E0E0] mb-6 text-center">Challenges</h2>
+                <div id="challenges-container" class="space-y-6"></div>
+            `;
+            const challengesContainer = document.getElementById('challenges-container');
+
+            demoChallenges.forEach(challenge => {
+                const challengeElement = document.createElement('div');
+                challengeElement.className = 'bg-[#2E2E4A] rounded-xl shadow-md p-6 text-[#E0E0E0]';
+                challengeElement.innerHTML = `
+                    <h3 class="text-xl font-oswald font-semibold text-[#E0E0E0] mb-2">${challenge.title}</h3>
+                    <p class="text-[#E0E0E0] mb-3">${challenge.description}</p>
+                    <div class="flex items-center text-[#A0A0B0] mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        <span>${challenge.participants} Participants</span>
+                    </div>
+                    <button class="w-full bg-[#8BC34A] text-white py-2 rounded-lg font-semibold hover:bg-[#9CCC65] transition-colors duration-300 join-challenge-btn" data-challenge-id="${challenge.id}">Join Challenge</button>
+                `;
+                challengesContainer.appendChild(challengeElement);
+            });
+
+            challengesContainer.querySelectorAll('.join-challenge-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const challengeId = event.currentTarget.dataset.challengeId;
+                    const challenge = demoChallenges.find(c => c.id === challengeId);
+                    if (challenge) {
+                        showMessage(`Joined "${challenge.title}"! (Demo only)`);
+                        event.currentTarget.textContent = 'Joined!';
+                        event.currentTarget.disabled = true;
+                        event.currentTarget.classList.remove('bg-[#8BC34A]', 'hover:bg-[#9CCC65]');
+                        event.currentTarget.classList.add('bg-gray-600', 'cursor-not-allowed'); // Darker gray for disabled
+                    }
+                });
+            });
+        }
+
+        // --- Initialization ---
+
+        window.onload = async () => {
+            // Splash screen button listener
+            continueAppBtn.addEventListener('click', () => {
+                splashScreen.classList.add('splash-exit'); // Start splash screen exit animation
+
+                setTimeout(() => {
+                    splashScreen.classList.add('hidden'); // Hide splash screen after animation
+                    contentArea.classList.remove('hidden', 'opacity-0', 'translate-y-full');
+                    navBar.classList.remove('hidden', 'opacity-0', 'translate-y-full');
+
+                    // Trigger app entry animation
+                    contentArea.classList.add('app-enter');
+                    navBar.classList.add('app-enter');
+
+                    // Initial page render after app UI is visible
+                    showPage(currentPage);
+                }, 800); // Match this timeout to the splash-exit transition duration
+            });
+
+
+            try {
+                // --- YOUR FIREBASE CONFIGURATION ---
+                // This has been updated with the Firebase configuration you provided.
+                const YOUR_FIREBASE_CONFIG = {
+                    apiKey: "AIzaSyCKW13ej5fGdtv-LpcKsuulsx6zM4aAJRw",
+                    authDomain: "rypd-demo.firebaseapp.com",
+                    projectId: "rypd-demo",
+                    storageBucket: "rypd-demo.firebasestorage.app",
+                    messagingSenderId: "806053873087",
+                    appId: "1:806053873087:web:0591e0b6ea6c8245818d0a"
+                    // measurementId is removed as it's not used by initializeApp, getAuth, getFirestore
+                };
+                window.app = initializeApp(YOUR_FIREBASE_CONFIG);
+                window.db = getFirestore(window.app);
+                window.auth = getAuth(window.app);
+                // --- END OF YOUR FIREBASE CONFIGURATION ---
+
+                // The following lines are fallback/Canvas environment specific.
+                // They are now effectively bypassed because window.app will be initialized by your config.
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+                if (Object.keys(firebaseConfig).length === 0 && !window.app) { // Check if window.app is already initialized by your config
+                    showMessage("Warning: Firebase configuration missing. App will run in limited demo mode.");
+                    console.warn("Firebase config is missing. Please ensure your Firebase config is correctly provided for full functionality.");
+                } else if (!window.app) { // If window.app is still null, use the Canvas provided config
+                    window.app = initializeApp(firebaseConfig);
+                    window.db = getFirestore(window.app);
+                    window.auth = getAuth(window.app);
+                }
+
+
+                // Sign in with custom token or anonymously
+                // If you are running locally, __initial_auth_token will be undefined.
+                // The app will then sign in anonymously using your Firebase project.
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialAuthToken) {
+                    await signInWithCustomToken(window.auth, initialAuthToken);
+                    console.log("Signed in with custom token.");
+                } else {
+                    await signInAnonymously(window.auth);
+                    console.log("Signed in anonymously.");
+                }
+
+                // Listen for auth state changes to set userId
+                onAuthStateChanged(window.auth, (user) => {
+                    if (user) {
+                        window.userId = user.uid;
+                        demoUserProfile.userId = user.uid; // Update demo profile with real user ID
+                        console.log("User authenticated:", user.uid);
+                    } else {
+                        window.userId = 'Not Authenticated (Demo)'; // Fallback for local run without auth
+                        demoUserProfile.userId = 'Not Authenticated (Demo)';
+                        console.log("User not authenticated.");
+                    }
+                    window.isAuthReady = true; // Mark auth as ready
+                    // The actual page rendering now happens after splash screen transition
+                });
+
+                // Set up navigation button click handlers
+                navButtons.feed.addEventListener('click', () => showPage('feed'));
+                navButtons.create.addEventListener('click', () => showPage('create'));
+                navButtons.profile.addEventListener('click', () => showPage('profile'));
+                navButtons.ai.addEventListener('click', () => showPage('ai'));
+                navButtons.challenges.addEventListener('click', () => showPage('challenges'));
+
+            } catch (error) {
+                console.error("Error initializing Firebase or app:", error);
+                showMessage(`Initialization error: ${error.message}`);
+            }
+        };
+    </script>
+</body>
+</html>
